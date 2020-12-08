@@ -3,29 +3,29 @@ project(simple_tcp C)
 
 set(CMAKE_C_STANDARD 99)
 
-include_directories(tcp)
+include_directories(src)
 
 add_executable(simple_tcp
     main.c
     main_demo.c
-    tcp/tcp_header.c
-    tcp/tcp_header.h
-    tcp/tcp_header_raw.c
-    tcp/tcp_header_raw.h
-    tcp/tcp_option.c
-    tcp/tcp_option.h
-    tcp/tcp_option_raw.c
-    tcp/tcp_option_raw.h
-    tcp/tcp_payload.c
-    tcp/tcp_payload.h
-    tcp/tcp_payload_raw.c
-    tcp/tcp_payload_raw.h
-    tcp/tcp_pseudo_header.c
-    tcp/tcp_pseudo_header.h
-    tcp/tcp_pseudo_header_raw.c
-    tcp/tcp_pseudo_header_raw.h
-    util/printer.c
-    util/printer.h
-    util/tcp_util.c
-    util/tcp_util.h
+    src/tcp/tcp_header.c
+    src/tcp/tcp_header.h
+    src/tcp/tcp_header_raw.c
+    src/tcp/tcp_header_raw.h
+    src/tcp/tcp_option.c
+    src/tcp/tcp_option.h
+    src/tcp/tcp_option_raw.c
+    src/tcp/tcp_option_raw.h
+    src/tcp/tcp_payload.c
+    src/tcp/tcp_payload.h
+    src/tcp/tcp_payload_raw.c
+    src/tcp/tcp_payload_raw.h
+    src/tcp/tcp_pseudo_header.c
+    src/tcp/tcp_pseudo_header.h
+    src/tcp/tcp_pseudo_header_raw.c
+    src/tcp/tcp_pseudo_header_raw.h
+    src/util/printer.c
+    src/util/printer.h
+    src/util/tcp_util.c
+    src/util/tcp_util.h
 )

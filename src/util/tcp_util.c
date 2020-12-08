@@ -2,10 +2,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <memory.h>
-#include "tcp_header.h"
-#include "tcp_option.h"
-#include "tcp_payload.h"
-#include "tcp_pseudo_header.h"
+#include <tcp/tcp_header.h>
+#include <tcp/tcp_option.h>
+#include <tcp/tcp_payload.h>
+#include <tcp/tcp_pseudo_header.h>
 
 static void compute_checksum(uint16_t *psum, const uint16_t *word, ssize_t length);
 

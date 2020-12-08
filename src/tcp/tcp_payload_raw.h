@@ -1,7 +1,7 @@
 #ifndef SIMPLE_TCP_TCP_PAYLOAD_RAW_H
 #define SIMPLE_TCP_TCP_PAYLOAD_RAW_H
 
-#include <elf.h>
+#include <stdint.h>
 
 typedef struct tcp_payload_raw_t {
     // tcp 数据

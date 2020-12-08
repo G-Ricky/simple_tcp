@@ -2,6 +2,7 @@
 #define SIMPLE_TCP_TCP_PAYLOAD_H
 
 #include <stdint.h>
+#include <sys/types.h>
 #include "tcp_payload_raw.h"
 
 typedef struct tcp_payload_t {
