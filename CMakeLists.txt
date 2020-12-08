@@ -8,6 +8,8 @@ include_directories(src)
 add_executable(simple_tcp
     main.c
     main_demo.c
+    src/common/string.c
+    src/common/string.h
     src/tcp/tcp_header.c
     src/tcp/tcp_header.h
     src/tcp/tcp_header_raw.c
@@ -16,6 +18,8 @@ add_executable(simple_tcp
     src/tcp/tcp_option.h
     src/tcp/tcp_option_raw.c
     src/tcp/tcp_option_raw.h
+    src/tcp/tcp_packet.c
+    src/tcp/tcp_packet.h
     src/tcp/tcp_payload.c
     src/tcp/tcp_payload.h
     src/tcp/tcp_payload_raw.c
@@ -24,8 +28,10 @@ add_executable(simple_tcp
     src/tcp/tcp_pseudo_header.h
     src/tcp/tcp_pseudo_header_raw.c
     src/tcp/tcp_pseudo_header_raw.h
+    src/tcp/tcp_stream.c
+    src/tcp/tcp_stream.h
     src/util/printer.c
     src/util/printer.h
     src/util/tcp_util.c
     src/util/tcp_util.h
-)
+    )

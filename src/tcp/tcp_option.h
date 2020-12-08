@@ -79,7 +79,7 @@ typedef struct tcp_option_t {
  * 创建 tcp 首部选项
  * @return
  */
-tcp_option *tcp_option_create();
+tcp_option *tcp_option_new();
 
 /**
  * 添加首部选项
@@ -98,6 +98,6 @@ int tcp_option_add(tcp_option *option, uint8_t kind, uint8_t length, const uint8
  * 释放 tcp 首部选项
  * @param option
  */
-void tcp_option_destroy(tcp_option *option);
+void tcp_option_delete(tcp_option *option);
 
 #endif //SIMPLE_TCP_TCP_OPTION_H

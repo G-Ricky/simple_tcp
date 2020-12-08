@@ -25,8 +25,9 @@ allocate_payload_fail:
 
 void tcp_payload_delete(tcp_payload *payload) {
     if (payload->raw->data != NULL) {
+        payload->length = 0;
         free(payload->raw->data);
     }
-    free(payload->raw);
+    tcp_payload_raw_delete(payload->raw);
     free(payload);
 }

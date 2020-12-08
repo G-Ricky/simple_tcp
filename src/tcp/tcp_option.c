@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "tcp_option.h"
 
 tcp_option_item *tcp_option_item_create(uint8_t kind, uint8_t length) {
@@ -49,8 +50,12 @@ void tcp_option_item_destroy(tcp_option_item *option) {
     free(option);
 }
 
-tcp_option *tcp_option_create() {
+tcp_option *tcp_option_new() {
     tcp_option *option = malloc(sizeof(tcp_option));
+    if (option == NULL) {
+        fprintf(stderr, "Create tcp_option fail.");
+        return NULL;
+    }
     option->offset = 0;
     option->size = 0;
     option->count = 0;
@@ -70,16 +75,22 @@ int tcp_option_add(tcp_option *option, uint8_t kind, uint8_t length, const uint8
         default:
             option->option[option->offset++] = kind;
             option->option[option->offset++] = length;
-            for (i = 2; i < length; ++i) {
-                option->option[option->offset++] = data[i - 2];
+            for (i = 0; i < length - 2; ++i) {
+                option->option[option->offset++] = data[i];
             }
             option->size += length;
+            // 字节对齐
+            uint8_t padding = length & 0x03u;
+            for (i = 0; i < 4 - padding; ++i) {
+                option->option[option->offset++] = TCP_OPT_KIND_NOP;
+                option->size++;
+            }
             break;
     }
     option->count = ((option->offset - 1u) >> 2u) + 1;
     return option->offset;
 }
 
-void tcp_option_destroy(tcp_option *option) {
+void tcp_option_delete(tcp_option *option) {
     free(option);
 }
