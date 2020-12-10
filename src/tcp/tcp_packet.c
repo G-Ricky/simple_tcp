@@ -42,6 +42,7 @@ tcp_packet *tcp_packet_new_syn(tcp_stream *stream, uint16_t mss) {
     // 设置固定首部
     tcp_header_set_src_port(packet->header, stream->src_port);
     tcp_header_set_dst_port(packet->header, stream->dst_port);
+    tcp_header_set_seq_num(packet->header, random()); // TODO 使用 linux 的生成方法
     tcp_header_set_syn(packet->header);
     // 设置首部选项
     uint16_t mss_net = htons(mss);

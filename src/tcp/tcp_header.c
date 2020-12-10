@@ -16,7 +16,7 @@ tcp_header *tcp_header_new() {
     if (header->option == NULL) {
         goto allocate_option_fail;
     }
-    tcp_header_set_seq_num(header, random());
+    tcp_header_set_seq_num(header, 0);
     tcp_header_set_ack_num(header, 0);
     tcp_header_set_data_offset(header, 5);
     tcp_header_set_rsv(header, 0);
