@@ -59,6 +59,13 @@ static int table_size_for(int capacity);
 
 static uint32_t get_source_address_from_route(uint32_t daddr);
 
+/**
+ * 获取网络位位数
+ * @param netmask
+ * @return
+ */
+uint8_t get_net_bits(uint32_t netmask);
+
 tcp_stream *tcp_stream_new(const char *dst_ad, uint16_t dst_port) {
     tcp_stream *stream = malloc(sizeof(tcp_stream));
     if (stream == NULL) {
@@ -117,7 +124,7 @@ int tcp_stream_connect(tcp_stream *stream) {
     dst.sin_family = AF_INET;
     dst.sin_addr.s_addr = htonl(stream->daddr);
     dst.sin_port = htons(stream->dst_port);
-    stream->src_port = get_source_address_from_route();
+    stream->src_port = get_source_address_from_route(stream->daddr);
 
     // TODO 获取未占用端口，获取源地址
     tcp_packet *packet = tcp_packet_new_syn(stream, 1460);
@@ -219,12 +226,33 @@ outer_loop:
         }
     }
 
-    qsort(table->routes, table->count, sizeof(route), (__compar_fn_t) &route_metric_comparator);
+    route *optimal_route = NULL;
+    uint8_t max_net_bits = 0;
     int i;
     for (i = 0; i < table->count; ++i) {
-        // 区分默认路由和其他路由
+        route *r = &table->routes[i];
+        // 路由不匹配
+        if (r->destination != (r->netmask & daddr)) {
+            continue;
+        }
+        uint8_t net_bits = get_net_bits(r->netmask);
+        // 首个匹配的路由
+        if (optimal_route == NULL
+            // 当前匹配的网络位比之前匹配的网络位长
+            || net_bits > max_net_bits
+            // 匹配的网络位位数相同时，比较 metric
+            || (net_bits == max_net_bits && r->metric > optimal_route->metric)) {
+            optimal_route = r;
+            max_net_bits = net_bits;
+        }
     }
-    // TODO 计算路由
+
+    printf("Destination Gateway Genmask Metric Iface\n");
+    printf("%08x %08x %u %u %s\n",
+        optimal_route->destination, optimal_route->gateway, get_net_bits(optimal_route->netmask), optimal_route->metric,
+        optimal_route->iface->value);
+
+    // TODO 根据接口名称匹配网络地址
 
     route_table_delete(table);
     regfree(&regex);
@@ -307,4 +335,13 @@ int route_metric_comparator(route *r1, route *r2) {
     return r1->metric > r2->metric
         ? 1
         : r1->metric < r2->metric ? -1 : 0;
+}
+
+uint8_t get_net_bits(uint32_t netmask) {
+    uint8_t bits = 0;
+    while (netmask != 0) {
+        bits++;
+        netmask <<= 1u;
+    }
+    return bits;
 }
