@@ -241,7 +241,7 @@ outer_loop:
             // 当前匹配的网络位比之前匹配的网络位长
             || net_bits > max_net_bits
             // 匹配的网络位位数相同时，比较 metric
-            || (net_bits == max_net_bits && r->metric > optimal_route->metric)) {
+            || (net_bits == max_net_bits && r->metric < optimal_route->metric)) {
             optimal_route = r;
             max_net_bits = net_bits;
         }
