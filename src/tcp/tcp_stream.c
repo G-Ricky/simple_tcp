@@ -5,9 +5,11 @@
 #include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ifaddrs.h>
 #include "tcp_stream.h"
 #include "tcp_packet.h"
 
+// TODO 分离 route 结构体
 typedef struct route_t {
     // 目标地址 主机序
     uint32_t destination;
@@ -64,7 +66,15 @@ static uint32_t get_source_address_from_route(uint32_t daddr);
  * @param netmask
  * @return
  */
-uint8_t get_net_bits(uint32_t netmask);
+static uint8_t get_net_bits(uint32_t netmask);
+
+/**
+ * 根据网卡名称匹配网卡
+ * @param ifap
+ * @param iface
+ * @return
+ */
+static int match_iface(struct ifaddrs **ifap, const char *iface);
 
 tcp_stream *tcp_stream_new(const char *dst_ad, uint16_t dst_port) {
     tcp_stream *stream = malloc(sizeof(tcp_stream));
@@ -115,19 +125,26 @@ int tcp_stream_connect(tcp_stream *stream) {
         perror("Open socket fail");
         return -3;
     }
-    /*
-     * 设置目标主机地址信息
-     */
-    struct sockaddr_in dst;
-    socklen_t socklen = sizeof(dst);
-    memset(&dst, 0, socklen);
-    dst.sin_family = AF_INET;
-    dst.sin_addr.s_addr = htonl(stream->daddr);
-    dst.sin_port = htons(stream->dst_port);
-    stream->src_port = get_source_address_from_route(stream->daddr);
+    // TODO 自定义端口池
+    // TODO 获取未占用端口
+    stream->saddr = get_source_address_from_route(stream->daddr);
+    if (stream->saddr == 0) {
+        fprintf(stderr, "创建连接失败，无法获取源地址");
+        return -4;
+    }
+    uint32_t nsaddr = ntohl(stream->saddr);
+    stream->src_addr = string_new(inet_ntoa(*(struct in_addr *) &nsaddr));
+    if (stream->src_addr == NULL) {
+        fprintf(stderr, "创建连接失败，无法分配内存");
+        return -5;
+    }
 
-    // TODO 获取未占用端口，获取源地址
     tcp_packet *packet = tcp_packet_new_syn(stream, 1460);
+    if (packet == NULL) {
+        string_delete(stream->src_addr);
+        stream->src_addr = NULL;
+        return -6;
+    }
     // TODO 新线程接收 packet，发送 syn ...
     tcp_packet_delete(packet);
     return 0;
@@ -137,7 +154,7 @@ int tcp_stream_connect(tcp_stream *stream) {
  * 从路由表获取
  * @return 32位主机序 ip
  */
-uint32_t get_source_address_from_route(uint32_t daddr) {
+static uint32_t get_source_address_from_route(uint32_t daddr) {
     FILE *fp;
     char buff[1024];
 
@@ -253,12 +270,21 @@ outer_loop:
         optimal_route->iface->value);
 
     // TODO 根据接口名称匹配网络地址
+    struct ifaddrs * ifaddr = NULL;
+    res = match_iface(&ifaddr, optimal_route->iface->value);
+    if (res == -1) {
+        fprintf(stderr, "No interface matched.");
+        return 0;
+    }
+    struct sockaddr_in* addr = (struct sockaddr_in *) ifaddr->ifa_addr;
+    uint32_t uint32_addr = ntohl(addr->sin_addr.s_addr);
+    printf("Matching interface: %s %08x\n", ifaddr->ifa_name, uint32_addr);
 
     route_table_delete(table);
     regfree(&regex);
     /* close */
     pclose(fp);
-    return 0;
+    return uint32_addr;
 error_after_table:
     route_table_delete(table);
 error_after_reg:
@@ -269,7 +295,7 @@ error_after_starting:
     return 0;
 }
 
-route_table *route_table_new(int capacity) {
+static route_table *route_table_new(int capacity) {
     if (capacity <= 0) {
         fprintf(stderr, "capacity must be positive.");
         return NULL;
@@ -293,7 +319,7 @@ allocate_route_table_fail:
     return NULL;
 }
 
-void route_table_delete(route_table *table) {
+static void route_table_delete(route_table *table) {
     int i = 0;
     for (; i < table->count; ++i) {
         string *iface = table->routes[i].iface;
@@ -305,7 +331,7 @@ void route_table_delete(route_table *table) {
     free(table);
 }
 
-int route_table_add(route_table *table, route *r) {
+static int route_table_add(route_table *table, route *r) {
     if (table->count >= table->capacity) {
         int new_capacity = (uint32_t) table->capacity << 1u;
         route *new_routes = malloc(new_capacity * sizeof(route));
@@ -321,7 +347,7 @@ int route_table_add(route_table *table, route *r) {
     return 0;
 }
 
-int table_size_for(int capacity) {
+static int table_size_for(int capacity) {
     uint32_t n = capacity - 1;
     n |= n >> 16u;
     n |= n >> 8u;
@@ -331,17 +357,40 @@ int table_size_for(int capacity) {
     return n <= 0 ? 1 : (int) (n + 1);
 }
 
-int route_metric_comparator(route *r1, route *r2) {
+static int route_metric_comparator(route *r1, route *r2) {
     return r1->metric > r2->metric
         ? 1
         : r1->metric < r2->metric ? -1 : 0;
 }
 
-uint8_t get_net_bits(uint32_t netmask) {
+static uint8_t get_net_bits(uint32_t netmask) {
     uint8_t bits = 0;
     while (netmask != 0) {
         bits++;
         netmask <<= 1u;
     }
     return bits;
+}
+
+static int match_iface(struct ifaddrs **ifap, const char *iface) {
+    if (getifaddrs(ifap) != 0) {
+        perror("Get interface fail");
+        *ifap = NULL;
+        return -1;
+    }
+    struct ifaddrs *iterator = *ifap;
+    while (iterator != NULL) {
+        // ipv4
+        if (iterator->ifa_addr->sa_family == AF_INET) {
+            size_t len = strlen(iterator->ifa_name);
+            if (strncmp(iterator->ifa_name, iface, len) == 0) {
+                *ifap = iterator;
+                return 0;
+            }
+        }
+        iterator = iterator->ifa_next;
+    }
+    *ifap = NULL;
+    // 没有匹配到
+    return -1;
 }
